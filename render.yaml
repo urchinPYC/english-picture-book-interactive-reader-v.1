@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: english-picture-book-backend
+    env: node
+    buildCommand: pnpm install
+    startCommand: pnpm tsx server.ts
+    envVars:
+      - key: GOOGLE_GEMINI_API_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production
