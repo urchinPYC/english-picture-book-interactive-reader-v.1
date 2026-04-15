@@ -4,7 +4,7 @@
 
 [[redirects]]
   from = "/api/*"
-  to = "https://https://english-picture-book-interactive-reader-63oz.onrender.com/api/:splat"
+  to = "https://english-picture-book-interactive-reader-v-1.onrender.com/api/:splat"
   status = 200
   force = true
 
