@@ -3,6 +3,7 @@ import BookLibrary from './components/Library/BookLibrary';
 import BookEditor from './components/TeacherPortal/BookEditor';
 import BookReader from './components/StudentPortal/BookReader';
 
+// 定義資料結構
 export interface PageData {
   id: string;
   imageUrl: string;
@@ -12,64 +13,61 @@ export interface PageData {
 export interface BookData {
   id: string;
   title: string;
+  coverUrl: string;
   pages: PageData[];
+  lastUpdated: string;
 }
 
-const API_BASE_URL = import.meta.env.PROD
-  ? 'https://english-picture-book-backend.onrender.com'
-  : 'http://localhost:3001';
+// 使用您目前的 Render 網址作為 API 基礎
+const API_BASE_URL = 'https://my-magic-story-land.onrender.com';
 
 export default function App( ) {
-  const [mode, setMode] = useState<'library' | 'edit' | 'read' | 'share'>('library');
+  const [view, setView] = useState<'library' | 'editor' | 'reader'>('library');
   const [books, setBooks] = useState<BookData[]>([]);
   const [currentBook, setCurrentBook] = useState<BookData | null>(null);
-  const [sharedBook, setSharedBook] = useState<BookData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
+  // 初始化載入範例繪本
   useEffect(() => {
-    const path = window.location.pathname;
-    if (path.startsWith('/share/')) {
-      const shareId = path.replace('/share/', '');
-      fetchSharedBook(shareId);
-      setMode('share');
+    const savedBooks = localStorage.getItem('picture-books');
+    if (savedBooks) {
+      setBooks(JSON.parse(savedBooks));
     } else {
-      loadBooks();
+      const initialBook: BookData = {
+        id: '1',
+        title: 'My New Book',
+        coverUrl: '',
+        pages: [{ id: 'p1', imageUrl: '', text: 'Welcome to my story land!' }],
+        lastUpdated: new Date().toLocaleDateString(),
+      };
+      setBooks([initialBook]);
     }
   }, []);
 
-  const loadBooks = () => {
-    const storedBooks = localStorage.getItem('englishPictureBooks');
-    if (storedBooks) {
-      setBooks(JSON.parse(storedBooks));
-    }
-  };
-
   const saveBooks = (updatedBooks: BookData[]) => {
     setBooks(updatedBooks);
-    localStorage.setItem('englishPictureBooks', JSON.stringify(updatedBooks));
+    localStorage.setItem('picture-books', JSON.stringify(updatedBooks));
   };
 
   const handleCreateBook = () => {
     const newBook: BookData = {
       id: Date.now().toString(),
-      title: '我的新繪本 My New Book',
-      pages: [{
-        id: Date.now().toString() + '-page1',
-        imageUrl: '',
-        text: 'Hello, this is my first page. Let\'s read together!',
-      }],
+      title: 'New Story',
+      coverUrl: '',
+      pages: [{ id: 'p1', imageUrl: '', text: 'Once upon a time...' }],
+      lastUpdated: new Date().toLocaleDateString(),
     };
-    saveBooks([...books, newBook]);
     setCurrentBook(newBook);
-    setMode('edit');
+    setView('editor');
   };
 
-  const handleSelectBook = (id: string, selectMode: 'edit' | 'read') => {
-    const book = books.find(b => b.id === id);
-    if (book) {
-      setCurrentBook(book);
-      setMode(selectMode);
-    }
+  const handleEditBook = (book: BookData) => {
+    setCurrentBook(book);
+    setView('editor');
+  };
+
+  const handleReadBook = (book: BookData) => {
+    setCurrentBook(book);
+    setView('reader');
   };
 
   const handleDeleteBook = (id: string) => {
@@ -79,123 +77,71 @@ export default function App( ) {
     }
   };
 
-  const handleSaveBook = (updatedPages: PageData[], updatedTitle: string) => {
-    if (currentBook) {
-      const updatedBooks = books.map(b =>
-        b.id === currentBook.id ? { ...b, pages: updatedPages, title: updatedTitle } : b
-      );
-      saveBooks(updatedBooks);
-      setCurrentBook({ ...currentBook, pages: updatedPages, title: updatedTitle });
-      alert('繪本已儲存！');
+  const handleSaveBook = (pages: PageData[], title: string) => {
+    if (!currentBook) return;
+    
+    const updatedBook: BookData = {
+      ...currentBook,
+      title,
+      pages,
+      coverUrl: pages[0]?.imageUrl || '',
+      lastUpdated: new Date().toLocaleDateString(),
+    };
+
+    const bookExists = books.find(b => b.id === currentBook.id);
+    let updatedBooks;
+    if (bookExists) {
+      updatedBooks = books.map(b => b.id === currentBook.id ? updatedBook : b);
+    } else {
+      updatedBooks = [...books, updatedBook];
     }
+    
+    saveBooks(updatedBooks);
+    setView('library');
   };
 
-  const handleShare = async (bookToShare: BookData) => {
-    setIsLoading(true);
+  const handleShareBook = async (book: BookData) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/share`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ book: bookToShare }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(book),
       });
-
-      if (!response.ok) {
-        throw new Error('分享失敗');
-      }
-
       const data = await response.json();
       const shareUrl = `${window.location.origin}/share/${data.shareId}`;
-      navigator.clipboard.writeText(shareUrl);
-      alert('分享連結已複製！');
+      alert(`分享連結已產生：\n${shareUrl}`);
     } catch (error) {
-      console.error('分享錯誤:', error);
       alert('分享失敗，請稍後再試。');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchSharedBook = async (shareId: string) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/share/${shareId}`);
-      if (!response.ok) {
-        throw new Error('載入分享繪本失敗');
-      }
-      const data = await response.json();
-      setSharedBook(data.book);
-    } catch (error) {
-      console.error('載入分享繪本錯誤:', error);
-      alert('載入分享繪本失敗，請檢查連結是否正確。');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <div className="App">
-      {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="text-white text-xl">載入中...</div>
-        </div>
-      )}
-
-      {mode === 'library' && (
-        <BookLibrary
-          books={books}
+    <div className="min-h-screen bg-[#FDF8F1]">
+      {view === 'library' && (
+        <BookLibrary 
+          books={books} 
           onCreate={handleCreateBook}
-          onSelect={handleSelectBook}
+          onEdit={handleEditBook}
+          onRead={handleReadBook}
           onDelete={handleDeleteBook}
-          onShare={handleShare}
-        />
-      )}
-
-      {mode === 'edit' && currentBook && (
-        <BookEditor
-          book={currentBook}
-          onSave={handleSaveBook}
-          onBack={() => setMode('library')}
+          onShare={handleShareBook}
         />
       )}
       
-      {mode === 'read' && currentBook && (
-        <BookReader 
-          pages={currentBook.pages} 
-          onBack={() => setMode('library')} 
+      {view === 'editor' && currentBook && (
+        <BookEditor 
+          book={currentBook}
+          onSave={handleSaveBook}
+          onBack={() => setView('library')}
         />
       )}
-
-      {mode === 'share' && sharedBook && (
+      
+      {view === 'reader' && currentBook && (
         <BookReader 
-          pages={sharedBook.pages} 
-          onBack={() => {
-            window.history.replaceState({}, '', window.location.pathname);
-            window.location.reload();
-          }} 
-          isShareMode={true}
+          pages={currentBook.pages}
+          onBack={() => setView('library')}
         />
       )}
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Fredericka+the+Great&display=swap' );
-        
-        body { 
-          font-family: 'Noto Sans TC', sans-serif; 
-          margin: 0; 
-          padding: 0; 
-        }
-
-        .sketch-font {
-          font-family: 'Fredericka the Great', cursive;
-        }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #D7CCC8; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #A1887F; }
-      `}} />
     </div>
   );
 }
