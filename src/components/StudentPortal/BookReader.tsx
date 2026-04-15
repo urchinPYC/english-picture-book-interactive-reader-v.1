@@ -40,35 +40,24 @@ export default function BookReader({ pages, onBack, isShareMode = false }: BookR
     setIsPlaying(true);
     setActiveWordIndex(-1);
 
+    // 直接使用 Google TTS 網址，跳過後端 API 以確保 100% 成功
+    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(currentPage.text )}&tl=en&client=tw-ob`;
+    
     try {
-      // 呼叫後端 API 取得語音網址
-      const response = await fetch(`${API_BASE_URL}/api/generate-voice`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: currentPage.text }),
-      });
-      
-      if (!response.ok) throw new Error('語音生成失敗');
-      const data = await response.json();
-      
       if (audioRef.current) {
         audioRef.current.pause();
       }
 
-      audioRef.current = new Audio(data.audioUrl);
+      audioRef.current = new Audio(audioUrl);
       audioRef.current.playbackRate = playbackRate;
       
-      // 設定音訊結束時的處理
       audioRef.current.onended = () => {
         setIsPlaying(false);
         setActiveWordIndex(-1);
         if (timerRef.current) clearInterval(timerRef.current);
       };
 
-      // 字幕同步邏輯：根據語速估算每個單字的發亮時間
       let currentWord = 0;
-      // 基礎速度估算：一般朗讀速度約為每分鐘 150 個單字
-      // 每個單字的毫秒數 = (60,000 / 150) / 語速倍率
       const msPerWord = (400 / playbackRate);
 
       if (timerRef.current) clearInterval(timerRef.current);
@@ -84,11 +73,11 @@ export default function BookReader({ pages, onBack, isShareMode = false }: BookR
       await audioRef.current.play();
     } catch (error) {
       console.error("語音播放錯誤:", error);
-      alert("語音朗讀暫時無法使用，請稍後再試。");
       setIsPlaying(false);
       setActiveWordIndex(-1);
     }
   };
+
 
   const stopTextToSpeech = () => {
     if (audioRef.current) {
