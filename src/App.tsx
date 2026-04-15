@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import BookLibrary from './components/Library/BookLibrary';
 import BookEditor from './components/TeacherPortal/BookEditor';
 import BookReader from './components/StudentPortal/BookReader';
-import BookLibrary from './components/Library/BookLibrary';
 
 export interface PageData {
   id: string;
