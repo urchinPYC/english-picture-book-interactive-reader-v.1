@@ -102,18 +102,24 @@ export default function App( ) {
 
   const handleShareBook = async (book: BookData) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/share`, {
+      // 這裡直接使用相對路徑，讓 Render 自動處理
+      const response = await fetch('/api/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(book),
       });
+      
+      if (!response.ok) throw new Error('分享失敗');
+      
       const data = await response.json();
       const shareUrl = `${window.location.origin}/share/${data.shareId}`;
       alert(`分享連結已產生：\n${shareUrl}`);
     } catch (error) {
-      alert('分享失敗，請稍後再試。');
+      console.error("分享錯誤:", error);
+      alert('分享功能暫時無法使用，但您可以繼續編輯與閱讀。');
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#FDF8F1]">
