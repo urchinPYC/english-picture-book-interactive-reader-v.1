@@ -32,22 +32,21 @@ app.post('/api/generate-voice', async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: '缺少文字內容' });
 
-    // 使用 Gemini 1.5 Flash 生成語音 (透過特定模型支援)
-    // 注意：這裡假設您使用的是支援 TTS 的 Gemini 整合方式
-    // 如果是標準 Gemini API，通常需要搭配 Google Cloud TTS
-    // 為了簡化，這裡提供一個結構，我們稍後在 Render 部署時會確保環境變數正確
+    // 使用 Google 翻譯的 TTS 作為穩定來源 (因為 Gemini TTS 需要額外設定)
+    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text )}&tl=en&client=tw-ob`;
     
-    // 暫時回傳一個模擬成功的訊息，或串接實際 API
-    // 實際部署時，我們會使用 Google Cloud TTS 或是透過 Gemini 產生的 Base64
     res.json({ 
       success: true, 
-      audioUrl: `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text )}&tl=en&client=tw-ob` 
+      audioUrl: audioUrl 
     });
   } catch (error: any) {
     console.error('TTS Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
+
+    
+   
 
 // 路由：分享繪本
 app.post('/api/share', (req, res) => {
