@@ -70,4 +70,3 @@ export default function BookReader({ pages, onBack }: { pages: any[], onBack: ()
     </div>
   );
 }
-
